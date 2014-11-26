@@ -123,3 +123,36 @@ static void invioDati() {
     delete s_out_hum;
     delete s_out_press;
 }
+
+uint8_t inizializeEth() {
+  if(Ethernet::isLinkUp()) {
+    //inizializza e testa Ethernet
+    Serial.print("Setting IP ... ");
+      if ( ether.dhcpSetup() ) {
+        Serial.println("\t\tsuccess");
+      } 
+      else {
+        if ( ether.staticSetup(ip) ) {
+          Serial.println("\t\tsuccess");
+        }
+        else {
+          Serial.println("\t\tfailed");
+          return 0;
+        }
+      }
+      Serial.print("Verifica sito web ... ");
+      if ( ether.dnsLookup( website ) ) {
+        Serial.println("\tsuccess");
+        return 1;
+      }
+      else {
+        Serial.println("\tfailed");
+        return 0;
+      }
+    return 1;
+  }
+  else {
+    Serial.println("cavo scollegato");
+    return 0;
+  }
+}

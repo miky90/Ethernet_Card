@@ -67,6 +67,7 @@ byte Ethernet::buffer[700];
 char website[] PROGMEM= "www.web-plus.it"; // www.TUO_SITO_WEB.it
 char buffer[70];
 unsigned long time_last = 0; 
+uint8_t connesso = 0;
 uint8_t pending_data = 0;
 byte interval = 30; // seconds - intervello di tempo tra un invio di dati ed il successivo verso il server
 
@@ -81,36 +82,15 @@ void setup()
   radio.setPALevel(RF24_PA_HIGH);
   network.begin(/*channel*/ 125, /*node address*/ MY_ADDRESS);
   
-  //inizializza e testa Ethernet
+  //testa scheda ethernet
   Serial.print("Verifica Enc28j60 ... ");
   if ( ether.begin( sizeof Ethernet::buffer, mac, ENC28J60_CS) )
     Serial.println("\tsuccess");
   else {
     Serial.println("\tfailed");
   }
-  Serial.print("Setting IP ... ");
-  if(1) {
-    if ( ether.dhcpSetup() ) {
-      Serial.println("\t\tsuccess");
-    } 
-    else {
-      if ( ether.staticSetup(ip) ) 
-        Serial.println("\t\tsuccess");
-      else 
-        Serial.println("\t\tfailed");
-    }
-    Serial.print("Verifica sito web ... ");
-    if ( ether.dnsLookup( website ) ) 
-      Serial.println("\tsuccess");
-    else 
-      Serial.println("\tfailed");
-  }
-  else {
-    if ( ether.staticSetup(ip) ) 
-        Serial.println("\t\tsuccess");
-      else 
-        Serial.println("\t\tfailed");
-  }
+  
+  connesso = inizializeEth();
   
   Serial.println();
   Serial.print("Setup eseguito in :");
@@ -149,13 +129,22 @@ void loop()
       Serial.println(payload.outPress);
       pending_data = 1;
   }
-  ether.packetLoop(ether.packetReceive());
-  if(pending_data) {
-    if (millis()/1000 > time_last){
-      if ( (time_last = millis()/1000) % interval == 0 ){
-        invioDati();
+  connesso = Ethernet::isLinkUp();
+  if(connesso) {
+    ether.packetLoop(ether.packetReceive());
+    if(pending_data) {
+      if (millis()/1000 > time_last){
+        if ( (time_last = millis()/1000) % interval == 0 ){
+          invioDati();
+        }
       }
     }
   }
-
+  else {
+    if (millis()/1000 > time_last){
+        if ( (time_last = millis()/1000) % interval == 0 ){
+          connesso = inizializeEth(); 
+        }
+      }
+  }
 }
