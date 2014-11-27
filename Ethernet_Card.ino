@@ -42,6 +42,8 @@
 
 #define MY_ADDRESS 00
 #define METEO_ADDRESS 01
+
+
 // nRF24L01(+) radio attached using Getting Started board 
 RF24 radio(8,9);
 
@@ -74,13 +76,15 @@ void setup()
 { 
   Serial.begin(9600);
   Serial.println("REBOOT");
-  
+  Serial.println("Free RAM: ");
+  Serial.println(freeRam());
   SPI.begin();
   radio.begin();
   radio.setDataRate(RF24_250KBPS);
   radio.setPALevel(RF24_PA_HIGH);
   network.begin(/*channel*/ 125, /*node address*/ MY_ADDRESS);
   
+  delay(15000);
   //inizializza e testa Ethernet
   Serial.print("Verifica Enc28j60 ... ");
   if ( ether.begin( sizeof Ethernet::buffer, mac, ENC28J60_CS) )
@@ -111,7 +115,8 @@ void setup()
       else 
         Serial.println("\t\tfailed");
   }
-  
+  Serial.println("Free RAM: ");
+  Serial.println(freeRam());
   Serial.println();
   Serial.print("Setup eseguito in :");
   Serial.print(millis()/1000);
@@ -148,9 +153,15 @@ void loop()
       Serial.print(" Press: ");
       Serial.println(payload.outPress);
       pending_data = 1;
+      Serial.println("Free RAM: ");
+      Serial.println(freeRam());
   }
-  ether.packetLoop(ether.packetReceive());
-  if(pending_data) {
+  word len = ether.packetReceive();
+  word pos = ether.packetLoop(len);
+  if (pos)  // check if valid tcp data is received
+    ether.httpServerReply(homePage()); // send web page data
+  
+  if(pending_data & ether.isLinkUp()) {
     if (millis()/1000 > time_last){
       if ( (time_last = millis()/1000) % interval == 0 ){
         invioDati();
